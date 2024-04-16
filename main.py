@@ -5,14 +5,12 @@ import telebot
 from telebot import types
 
 from questions import questions
+from TOKEN import TOKEN
 
-# Токен вашего бота
-TOKEN = 'TOKEN'
 
 # Создание объекта бота
 bot = telebot.TeleBot(TOKEN)
 
-# Словарь с вопросами и ответами
 
 # Глобальные переменные для хранения текущего вопроса и правильного ответа
 current_question = None
@@ -48,7 +46,7 @@ def ask_question(message):
 
         shuffled_answers = answers.copy()
         shuffle(shuffled_answers)
-        markup.add(*shuffled_answers)
+        markup.add(*shuffled_answers, row_width=2)
         bot.send_message(message.chat.id, current_question, reply_markup=markup)
     except StopIteration:
         end_game(message)
