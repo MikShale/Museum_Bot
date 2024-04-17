@@ -5,7 +5,7 @@ import telebot
 from telebot import types
 
 from TOKEN import TOKEN
-from CONSTS import *
+from consts import *
 from questions import *
 
 
@@ -85,7 +85,7 @@ def handle_message(message):
 
 # Функция для завершения игры
 def end_game(message):
-    bot.send_message(message.chat.id, f"Игра окончена! Ваш счет: {GAME_DATA["score"]}")
+    bot.send_message(message.chat.id, f"Игра окончена! Ваш счет: {GAME_DATA['score']}")
 
 
 # Запуск бота
