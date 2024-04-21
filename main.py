@@ -1,92 +1,118 @@
 from random import shuffle
-from time import sleep
 
 import telebot
 from telebot import types
 
 from TOKEN import TOKEN
-from consts import *
 from questions import *
+from logger import error_handler
 
-
-# Создание объекта бота
 bot = telebot.TeleBot(TOKEN)
+
+
+class GameData:
+    def __init__(self, last_message_date):
+        self.last_message_date = last_message_date
+        self.museum = None
+        self.difficulty = None
+        self.question_iterator = None
+        self.correct_answer = None
+        self.score = 0
+        self.answers = None
+
+    def display_variables(self):
+        print(self.__dict__)
+
+
+Users = {}
 
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    # При начале игры обнуляем все глобальные переменные
-    global GAME_DATA
-    GAME_DATA.update({
-        "correct_answer": None,
-        "museum": None,
-        "difficulty": None,
-        "current_state": "Select museum",
-        "score": 0,
-        "questions_iterator": None,
-        "states_iterator": iter(STATES.items())
-    })
-
-    bot.send_message(message.chat.id, f"Добро пожаловать в этот замечательный бот!")
-    sleep(1)
-    choose_museum_and_difficulty(message)
+    chat_id = message.chat.id
+    bot.send_message(chat_id, f"Добро пожаловать в этот замечательный бот!")
+    Users[chat_id] = GameData(message.date)
+    choose_museum(chat_id)
 
 
-def choose_museum_and_difficulty(message):
-    global GAME_DATA
+@error_handler
+def choose_museum(chat_id):
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+    markup.add(*QUESTIONS.keys())
+    msg = bot.send_message(chat_id, "В какой музей отправимся сегодня?", reply_markup=markup)
+    bot.register_next_step_handler(msg, answer_museum)
+
+
+@error_handler
+def answer_museum(message):
+    chat_id = message.chat.id
+    if message.text in QUESTIONS.keys():
+        Users[chat_id].museum = message.text
+        choose_difficulty(chat_id)
+    else:
+        bot.send_message(chat_id, f"Нет такого Музея!")
+        choose_museum(chat_id)
+
+
+@error_handler
+def choose_difficulty(chat_id):
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+    markup.add(*QUESTIONS[Users[chat_id].museum].keys())
+    msg = bot.send_message(chat_id, "Выберете уровень сложности:", reply_markup=markup)
+    bot.register_next_step_handler(msg, answer_difficulty)
+
+
+@error_handler
+def answer_difficulty(message):
+    chat_id = message.chat.id
+    if message.text in QUESTIONS[Users[chat_id].museum].keys():
+        Users[chat_id].difficulty = message.text
+        Users[chat_id].question_iterator = iter(
+            QUESTIONS[Users[chat_id].museum][Users[chat_id].difficulty].items())
+        ask_question(chat_id)
+
+    else:
+        bot.send_message(chat_id, f"Нет такого уровня сложности")
+        choose_difficulty(chat_id)
+
+
+@error_handler
+def ask_question(chat_id):
     try:
-        text, buttons_name = next(GAME_DATA["states_iterator"])
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        markup.add(*buttons_name)
-        bot.send_message(message.chat.id, text, reply_markup=markup)
-    except StopIteration:
-        pass
-
-
-def ask_question(message):
-    global GAME_DATA
-    try:
-        current_question, answers = next(GAME_DATA["questions_iterator"])
-        GAME_DATA["correct_answer"] = answers[0]
+        question, answers = next(Users[chat_id].question_iterator)
+        Users[chat_id].answers = answers
+        Users[chat_id].correct_answer = answers[0]
         shuffled_answers = answers.copy()
         shuffle(shuffled_answers)
+
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         markup.add(*shuffled_answers, row_width=2)
-        bot.send_message(message.chat.id, current_question, reply_markup=markup)
+        msg = bot.send_message(chat_id, question, reply_markup=markup)
+        bot.register_next_step_handler(msg, answer_question)
     except StopIteration:
-        end_game(message)
+        end_game(chat_id)
 
 
-# Обработка ответа пользователя
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    global GAME_DATA
-    if GAME_DATA.get("current_state") == "Select museum":
-        GAME_DATA["current_state"] = "Select difficulty"
-        GAME_DATA["museum"] = message.text
-        choose_museum_and_difficulty(message)
-
-    elif GAME_DATA.get("current_state") == "Select difficulty":
-        GAME_DATA["current_state"] = "Ask questions"
-        GAME_DATA["difficulty"] = message.text
-
-        GAME_DATA["questions_iterator"] = iter(QUESTIONS[GAME_DATA["museum"]][GAME_DATA['difficulty']].items())
-
-        ask_question(message)
-
-    elif GAME_DATA.get("current_state") == "Ask questions":
-        if message.text == GAME_DATA["correct_answer"]:
-            bot.send_message(message.chat.id, "Правильно! 🎉")
-            GAME_DATA["score"] += 1
-        else:
-            bot.send_message(message.chat.id, f"Неправильно 😞\nПравильный ответ: {GAME_DATA["correct_answer"]}")
-        ask_question(message)
+@error_handler
+def answer_question(message):
+    chat_id = message.chat.id
+    if message.text == Users[chat_id].correct_answer:
+        bot.send_message(chat_id, "Правильно! 🎉")
+        Users[chat_id].score += 1
+    else:
+        bot.send_message(chat_id,
+                         f"Неправильно 😞\nПравильный ответ: {Users[chat_id].correct_answer}")
+    ask_question(chat_id)
 
 
-# Функция для завершения игры
-def end_game(message):
-    bot.send_message(message.chat.id, f"Игра окончена! Ваш счет: {GAME_DATA['score']}")
+@error_handler
+def end_game(chat_id):
+    bot.send_message(chat_id, f"Игра окончена! Ваш счет: {Users[chat_id].score}")
+    print(Users[chat_id].display_variables)
+    Users.pop(chat_id)
+    print(Users)
 
+bot.enable_save_next_step_handlers(delay=2)
+bot.load_next_step_handlers()
 
-# Запуск бота
-bot.polling()
+bot.polling(none_stop=True)
