@@ -1,9 +1,9 @@
+""" Логгер и декоратор для логгированя всех функций """
+
+
 import functools
 import logging
 import colorlog
-
-"""Логгер, и декоратор для логирования ошибок и успешного прохождения тестов"""
-
 
 
 logger = logging.getLogger(__name__)

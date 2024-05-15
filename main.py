@@ -1,13 +1,14 @@
+""" Museum Bot """
+
 from random import shuffle
 
-import telebot
-from telebot import types
+from telebot import types, TeleBot
 
 from TOKEN import TOKEN
-from questions import *
-from logger import error_handler
+from questions import QUESTIONS
+import logger
 
-bot = telebot.TeleBot(TOKEN)
+bot = TeleBot(TOKEN)
 
 
 class GameData:
@@ -24,45 +25,53 @@ class GameData:
         print(self.__dict__)
 
 
+logger.logger.info("Bot started")
+
 Users = {}
 
 
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
-    bot.send_message(chat_id, f"Добро пожаловать в этот замечательный бот!")
+    bot.send_message(chat_id, "Добро пожаловать в этот замечательный бот!")
     Users[chat_id] = GameData(message.date)
     choose_museum(chat_id)
 
 
-@error_handler
+@logger.error_handler
 def choose_museum(chat_id):
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-    markup.add(*QUESTIONS.keys())
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+
+    for button in list(QUESTIONS.keys()):
+        markup.add(button)
+
     msg = bot.send_message(chat_id, "В какой музей отправимся сегодня?", reply_markup=markup)
     bot.register_next_step_handler(msg, answer_museum)
 
 
-@error_handler
+@logger.error_handler
 def answer_museum(message):
     chat_id = message.chat.id
     if message.text in QUESTIONS.keys():
         Users[chat_id].museum = message.text
         choose_difficulty(chat_id)
     else:
-        bot.send_message(chat_id, f"Нет такого Музея!")
+        bot.send_message(chat_id, "Нет такого Музея!")
         choose_museum(chat_id)
 
 
-@error_handler
+@logger.error_handler
 def choose_difficulty(chat_id):
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-    markup.add(*QUESTIONS[Users[chat_id].museum].keys())
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+
+    for button in list(QUESTIONS[Users[chat_id].museum].keys()):
+        markup.add(button)
+
     msg = bot.send_message(chat_id, "Выберете уровень сложности:", reply_markup=markup)
     bot.register_next_step_handler(msg, answer_difficulty)
 
 
-@error_handler
+@logger.error_handler
 def answer_difficulty(message):
     chat_id = message.chat.id
     if message.text in QUESTIONS[Users[chat_id].museum].keys():
@@ -72,11 +81,11 @@ def answer_difficulty(message):
         ask_question(chat_id)
 
     else:
-        bot.send_message(chat_id, f"Нет такого уровня сложности")
+        bot.send_message(chat_id, "Нет такого уровня сложности")
         choose_difficulty(chat_id)
 
 
-@error_handler
+@logger.error_handler
 def ask_question(chat_id):
     try:
         question, answers = next(Users[chat_id].question_iterator)
@@ -86,14 +95,17 @@ def ask_question(chat_id):
         shuffle(shuffled_answers)
 
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        markup.add(*shuffled_answers, row_width=2)
+
+        for button in list(shuffled_answers):
+            markup.add(button)
+
         msg = bot.send_message(chat_id, question, reply_markup=markup)
         bot.register_next_step_handler(msg, answer_question)
     except StopIteration:
         end_game(chat_id)
 
 
-@error_handler
+@logger.error_handler
 def answer_question(message):
     chat_id = message.chat.id
     if message.text == Users[chat_id].correct_answer:
@@ -105,14 +117,15 @@ def answer_question(message):
     ask_question(chat_id)
 
 
-@error_handler
+@logger.error_handler
 def end_game(chat_id):
     bot.send_message(chat_id, f"Игра окончена! Ваш счет: {Users[chat_id].score}")
-    print(Users[chat_id].display_variables)
+
     Users.pop(chat_id)
-    print(Users)
+
 
 bot.enable_save_next_step_handlers(delay=2)
 bot.load_next_step_handlers()
 
-bot.polling(none_stop=True)
+if __name__ == "__main__":
+    bot.polling(none_stop=True)
