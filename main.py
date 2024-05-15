@@ -1,6 +1,7 @@
 """ Museum Bot """
 
 from random import shuffle
+from os.path import exists, join
 
 from telebot import types, TeleBot
 
@@ -88,18 +89,31 @@ def answer_difficulty(message):
 @logger.error_handler
 def ask_question(chat_id):
     try:
+        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+
+        # в question лежит список с текстом и фоткой, если фотка есть
         question, answers = next(Users[chat_id].question_iterator)
         Users[chat_id].answers = answers
         Users[chat_id].correct_answer = answers[0]
         shuffled_answers = answers.copy()
         shuffle(shuffled_answers)
 
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-
         for button in list(shuffled_answers):
             markup.add(button)
 
-        msg = bot.send_message(chat_id, question, reply_markup=markup)
+        if len(question) == 2:
+            path_to_photo = join("photos", question[1])
+
+            if exists(path_to_photo):
+                with open(path_to_photo, "rb") as photo_file:
+                    msg = bot.send_photo(chat_id, photo_file, caption = question[0], reply_markup=markup)
+
+            else:
+                logger.logger.error("Photo not found")
+
+        else:
+            msg = bot.send_message(chat_id, question[1], reply_markup=markup)
+
         bot.register_next_step_handler(msg, answer_question)
     except StopIteration:
         end_game(chat_id)
