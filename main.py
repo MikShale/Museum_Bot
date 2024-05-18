@@ -108,13 +108,13 @@ def ask_question(chat_id):
 
             if exists(path_to_photo):
                 with open(path_to_photo, "rb") as photo_file:
-                    msg = bot.send_photo(chat_id, photo_file, caption = question[0], reply_markup=markup)
+                    msg = bot.send_photo(chat_id, photo_file, caption=question[0], reply_markup=markup)
 
             else:
                 logger.logger.error("Photo not found")
 
         else:
-            msg = bot.send_message(chat_id, question[1], reply_markup=markup)
+            msg = bot.send_message(chat_id, question[0], reply_markup=markup)
 
         bot.register_next_step_handler(msg, answer_question)
     except StopIteration:
