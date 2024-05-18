@@ -8,11 +8,11 @@ For start:
 1) Download all files.
 2) Then install requirements by going to the directory of the project in the terminal and using the command: pip install -r /path/to/requirements.txt
 3) Then start with "python3 main.py"
+4) Enter TOKEN of your bot
 
 The bot implements a logger that reports when a certain function has been triggered.
 Additionally, the bot supports the simultaneous operation of multiple users.
 
-For the successful operation of the bot, it is necessary to create a file named TOKEN.py in the bot's directory. 
 
 The file questions.py contains questions with file names and answers. It is possible to add any number of museums, levels of difficulty, questions, or answers. The main thing is to maintain the original structure. The comma after the question enclosed in parentheses is IMPORTANT!
 Example: ("What are the causes of unemployment depicted in this photo?",)
