@@ -32,7 +32,7 @@ def error_handler(func):
     def wrapper(*args, **kwargs):
         try:
             result = func(*args, **kwargs)
-            logger.info(f"Function {func.__name__} executed successfully.")
+            logger.info(f"Someome used {func.__name__} and it executed successfully.")
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
 

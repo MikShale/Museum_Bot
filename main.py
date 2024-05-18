@@ -4,13 +4,15 @@ from random import shuffle
 from os.path import exists, join
 
 from telebot import types, TeleBot
+from art import tprint
 
-from TOKEN import TOKEN
 from questions import QUESTIONS
 import logger
 
-bot = TeleBot(TOKEN)
+tprint("Museum BOT", "rnd-xlarge")
+TOKEN = input("Введите Токен бота в котором нужно запуститься: \n")
 
+bot = TeleBot(TOKEN)
 
 class GameData:
     def __init__(self, last_message_date):
